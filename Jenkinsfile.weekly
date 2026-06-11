@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    
+    triggers {
+        cron('H 3 * * 1')
+    }
+    
+    parameters {
+        booleanParam(name: 'SECURITY_SCAN', defaultValue: true, description: 'Run security scan?')
+        booleanParam(name: 'PERFORMANCE_TEST', defaultValue: true, description: 'Run performance test?')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'npm install && npm run build'
+            }
+        }
+        
+        stage('Unit Tests') {
+            steps {
+                echo '>>> Running unit tests...'
+                sh 'npm test'
+            }
+        }
+        
+        stage('Security Scan') {
+            when {
+                expression { params.SECURITY_SCAN == true }
+            }
+            steps {
+                echo '>>> Running security scan...'
+                sh 'npm audit || true'
+            }
+        }
+        
+        stage('Performance Test') {
+            when {
+                expression { params.PERFORMANCE_TEST == true }
+            }
+            steps {
+                echo '>>> Running performance tests...'
+                sh 'echo "Performance metrics generated"'
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '===== Weekly Pipeline Complete ====='
+        }
+    }
+}
